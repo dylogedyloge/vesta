@@ -8,6 +8,7 @@ import { ArrowLeft, CalendarIcon, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { todoApi } from "@/lib/api/todos";
+import { userApi } from "@/lib/api/users";
 import { Todo, User, TodoDetailProps } from "@/types";
 import { QUERY_KEYS } from "@/config";
 
@@ -21,10 +22,7 @@ export default function TodoDetail({ id }: TodoDetailProps) {
   // Fetch user details if we have a todo
   const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: QUERY_KEYS.USER_DETAIL(todo?.userId || 0),
-    queryFn: async () => {
-      const response = await fetch(`https://jsonplaceholder.typicode.com/users/${todo?.userId}`);
-      return response.json();
-    },
+    queryFn: () => userApi.getUserById(todo?.userId || 0),
     enabled: !!todo?.userId,
   });
 
@@ -66,6 +64,7 @@ export default function TodoDetail({ id }: TodoDetailProps) {
               <CardTitle className="prose">Todo Not Found</CardTitle>
               <CardDescription>
                 The requested todo item could not be found.
+                This app uses JSONPlaceholder as a mock API and does not persist data.So, the newly created todo does not exist.
               </CardDescription>
             </CardHeader>
             <CardContent>
