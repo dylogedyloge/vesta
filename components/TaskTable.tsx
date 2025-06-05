@@ -142,6 +142,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   }, [users]);
 
   const fetchTodos = async (pageNum?: number) => {
+    console.log("fetching todos", pageNum);
     try {
       setIsFetchingNextPage(true);
       // Fetch all todos initially

@@ -25,6 +25,7 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
     return { data: newTodo, error: null };
   } catch (error) {
     // Even if API fails, return mock data
+    console.log(error);
     const newTodo: Todo = {
       id: String(mockTodoId++),
       ...todo,
@@ -44,6 +45,7 @@ export async function deleteTodo(id: string) {
     revalidatePath('/');
     return { data: id, error: null };
   } catch (error) {
+    console.log(error);
     // Even if API fails, return success for UI
     return { data: id, error: null };
   }
@@ -67,6 +69,8 @@ export async function updateTodo(id: number, todo: Partial<Todo>) {
     revalidatePath('/');
     return { data: updatedTodo, error: null };
   } catch (error) {
+    console.log(error);
+
     // Even if API fails, return mock data
     const updatedTodo: Todo = {
       id: String(id),
