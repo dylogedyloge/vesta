@@ -27,13 +27,14 @@ export function CreateTodoDialog({
   users,
   isOpen,
   onOpenChange,
-  isMobile,
 }: CreateTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     completed: false,
-    userId: users[0]?.id || 0
+    userId: String(users[0]?.id || ""),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   })
 
   const addTodo = useTodoStore(state => state.addTodo)
@@ -43,7 +44,9 @@ export function CreateTodoDialog({
       setFormData({
         title: "",
         completed: false,
-        userId: users[0]?.id || 0
+        userId: String(users[0]?.id || ""),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       })
     }
   }, [isOpen, users])
@@ -92,7 +95,7 @@ export function CreateTodoDialog({
             <Label htmlFor="assignee">Assignee</Label>
             <Select
               value={String(formData.userId)}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, userId: Number(value) }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, userId: value }))}
             >
               <SelectTrigger id="assignee">
                 <SelectValue placeholder="Select an assignee" />

@@ -6,7 +6,7 @@ interface TodoStore {
   setInitialTodos: (todos: Todo[]) => void;
   addTodo: (todo: Todo) => void;
   updateTodo: (todo: Todo) => void;
-  deleteTodo: (id: number) => void;
+  deleteTodo: (id: string) => void;
 }
 
 export const useTodoStore = create<TodoStore>((set) => ({

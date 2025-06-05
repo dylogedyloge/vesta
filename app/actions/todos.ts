@@ -37,7 +37,7 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
   }
 }
 
-export async function deleteTodo(id: number) {
+export async function deleteTodo(id: string) {
   try {
     // Try the API call (will fail for JSONPlaceholder)
     await todoApi.deleteTodo(id);

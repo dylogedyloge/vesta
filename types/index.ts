@@ -13,6 +13,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone: string;
+  company: {
+    name: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +45,11 @@ export interface TodoStore {
 // Component Props Types
 export interface TodoDetailProps {
   id: string;
+  initialData?: {
+    todo: Todo | null;
+    user: User | null;
+    error: string | null;
+  };
 }
 
 export interface CreateTodoDialogProps {

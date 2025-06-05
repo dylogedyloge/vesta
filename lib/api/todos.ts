@@ -30,7 +30,7 @@ export const todoApi = {
     return response.data;
   },
 
-  deleteTodo: async (id: number) => {
+  deleteTodo: async (id: string) => {
     await axios.delete(`${API_CONFIG.BASE_URL}/todos/${id}`);
     return id;
   }

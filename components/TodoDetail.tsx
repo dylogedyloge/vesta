@@ -4,23 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CalendarIcon, UserCircle, Mail, Phone, Building2 } from "lucide-react";
-import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TodoDetailProps } from "@/types";
 import { getTodoById } from "@/app/actions/todos";
 import { getUserById } from "@/app/actions/users";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Todo, User } from "@/types";
+import type { TodoDetailProps,Todo, User } from "@/types";
 
-type TodoDetailProps = {
-  id: string;
-  initialData?: {
-    todo: Todo | null;
-    user: User | null;
-    error: string | null;
-  };
-};
+
 
 export default function TodoDetail({ id, initialData }: TodoDetailProps) {
   const router = useRouter();

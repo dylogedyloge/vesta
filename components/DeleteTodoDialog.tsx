@@ -18,7 +18,6 @@ export function DeleteTodoDialog({
   todoTitle,
   isOpen,
   onOpenChange,
-  isMobile,
 }: DeleteTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const deleteTodoFromStore = useTodoStore(state => state.deleteTodo)
