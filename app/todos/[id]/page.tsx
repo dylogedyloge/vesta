@@ -1,11 +1,33 @@
 import { Suspense } from "react";
 import TodoDetail from "@/components/TodoDetail";
+import { getTodoById } from "@/app/actions/todos";
+import { getUserById } from "@/app/actions/users";
 
-export default async function TodoDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+// Enable revalidation every 60 seconds
+export const revalidate = 60;
+
+export default async function TodoDetailPage({ params }: { params: { id: string } }) {
+  // Fetch data on the server
+  const [todoResult, userResult] = await Promise.all([
+    getTodoById(params.id),
+    // We can only get the user after we have the todo
+    getTodoById(params.id).then(async (result) => {
+      if (result.data) {
+        return getUserById(result.data.userId);
+      }
+      return { data: null, error: null };
+    })
+  ]);
+
+  const initialData = {
+    todo: todoResult.data || null,
+    user: userResult.data || null,
+    error: todoResult.error || userResult.error || null
+  };
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <TodoDetail id={id} />
+      <TodoDetail id={params.id} initialData={initialData} />
     </Suspense>
   );
 } 

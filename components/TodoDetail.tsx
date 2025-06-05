@@ -10,41 +10,59 @@ import { TodoDetailProps } from "@/types";
 import { getTodoById } from "@/app/actions/todos";
 import { getUserById } from "@/app/actions/users";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { Todo, User } from "@/types";
 
-export default function TodoDetail({ id }: TodoDetailProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [todo, setTodo] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+type TodoDetailProps = {
+  id: string;
+  initialData?: {
+    todo: Todo | null;
+    user: User | null;
+    error: string | null;
+  };
+};
+
+export default function TodoDetail({ id, initialData }: TodoDetailProps) {
+  const router = useRouter();
+  const [todo, setTodo] = useState<Todo | null>(initialData?.todo || null);
+  const [user, setUser] = useState<User | null>(initialData?.user || null);
+  const [error, setError] = useState<string | null>(initialData?.error || null);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const todoResult = await getTodoById(id);
-        if (todoResult.error) {
-          throw new Error(todoResult.error);
-        }
-        
-        if (todoResult.data) {
-          setTodo(todoResult.data);
-          const userResult = await getUserById(todoResult.data.userId);
-          if (userResult.error) {
-            throw new Error(userResult.error);
+    // Only fetch if we don't have initialData
+    if (!initialData) {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const todoResult = await getTodoById(id);
+          if (todoResult.error) {
+            setError(todoResult.error);
+            return;
           }
-          setUser(userResult.data);
+          
+          setTodo(todoResult.data);
+          
+          if (todoResult.data) {
+            const userResult = await getUserById(todoResult.data.userId);
+            if (userResult.error) {
+              setError(userResult.error);
+              return;
+            }
+            setUser(userResult.data);
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
 
-    fetchData();
-  }, [id]);
+      fetchData();
+    }
+  }, [id, initialData]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="container mx-auto p-4 max-w-3xl">
         <Skeleton className="h-8 w-24 mb-4" />
@@ -69,14 +87,16 @@ export default function TodoDetail({ id }: TodoDetailProps) {
     );
   }
 
+  const handleBack = () => {
+    router.back();
+  };
+
   if (error) {
     return (
       <div className="container mx-auto p-4 max-w-3xl">
-        <Link href="/">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
-          </Button>
-        </Link>
+        <Button variant="ghost" className="mb-4" onClick={handleBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
+        </Button>
         <Card className="bg-destructive/10">
           <CardHeader>
             <CardTitle className="text-destructive">Error</CardTitle>
@@ -90,11 +110,9 @@ export default function TodoDetail({ id }: TodoDetailProps) {
   if (!todo) {
     return (
       <div className="container mx-auto p-4 max-w-3xl">
-        <Link href="/">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
-          </Button>
-        </Link>
+        <Button variant="ghost" className="mb-4" onClick={handleBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
+        </Button>
         <Card className="bg-muted">
           <CardHeader>
             <CardTitle>Todo Not Found</CardTitle>
@@ -107,11 +125,9 @@ export default function TodoDetail({ id }: TodoDetailProps) {
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
-      <Link href="/">
-        <Button variant="ghost" className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
-        </Button>
-      </Link>
+      <Button variant="ghost" className="mb-4" onClick={handleBack}>
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
+      </Button>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

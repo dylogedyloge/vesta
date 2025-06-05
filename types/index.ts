@@ -1,19 +1,20 @@
 // Base Types
 export interface Todo {
-  id: number;
+  id: string;
   title: string;
+  description?: string;
   completed: boolean;
-  userId: number;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
-  phone: string;
-  company: {
-    name: string;
-  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 // API Types
@@ -33,7 +34,7 @@ export interface TodoStore {
   todos: Todo[];
   addTodo: (todo: Todo) => void;
   editTodo: (todo: Todo) => void;
-  deleteTodo: (todoId: number) => void;
+  deleteTodo: (todoId: string) => void;
   setInitialTodos: (todos: Todo[]) => void;
 }
 
@@ -58,7 +59,7 @@ export interface EditTodoDialogProps {
 }
 
 export interface DeleteTodoDialogProps {
-  todoId: number;
+  todoId: string;
   todoTitle: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,3 +84,10 @@ export interface PaginationLinkProps extends React.ComponentProps<"a"> {
   isActive?: boolean;
   size?: "default" | "sm" | "lg" | "icon";
 } 
+
+export interface TaskTableProps {
+  initialData: {
+    todos: Todo[];
+    users: User[];
+  };
+}

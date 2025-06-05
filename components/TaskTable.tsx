@@ -10,11 +10,11 @@ import { Skeleton } from "./ui/skeleton";
 import { DeleteTodoDialog } from "./DeleteTodoDialog";
 import { EditTodoDialog } from "./EditTodoDialog";
 import { CreateTodoDialog } from "./CreateTodoDialog";
-import { Plus, Search } from "lucide-react";
-import { Todo, User } from "@/types";
+import { Plus } from "lucide-react";
+import { Todo, User, TaskTableProps } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { MultipleSelector, Option } from "./ui/multiple-selector";
+import { MultipleSelector, Option } from "@/components/ui/multiple-selector";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
@@ -23,25 +23,123 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { getTodos } from "@/app/actions/todos";
 import { getUsers } from "@/app/actions/users";
 import { useTodoStore } from "@/store/todoStore";
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function TaskTable() {
+
+
+export default function TaskTable({ initialData }: TaskTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const pageSize = PAGINATION.DEFAULT_PAGE_SIZE;
   const isMobile = useIsMobile();
   const [todoToDelete, setTodoToDelete] = useState<Todo | null>(null);
   const [todoToEdit, setTodoToEdit] = useState<Todo | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<Option[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(initialData.users);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
+  const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '');
 
   const todos = useTodoStore((state) => state.todos);
   const setInitialTodos = useTodoStore((state) => state.setInitialTodos);
+
+  // Initialize store with server-side data
+  useEffect(() => {
+    setInitialTodos(initialData.todos);
+  }, []);
+
+  // Get filter values from URL
+  const statusFilter = searchParams.get('status') || 'all';
+  const searchQuery = searchParams.get('search') || '';
+  const assigneeIds = searchParams.get('assignees')?.split(',').filter(Boolean) || [];
+
+  const getUserName = (userId: string): string => {
+    if (!users.length) return "Loading...";
+    const user = users.find((u: User) => String(u.id) === String(userId));
+    return user ? user.name : "Unknown";
+  };
+
+  // Create assigneeFilter after getUserName is defined and users are loaded
+  const assigneeFilter: Option[] = assigneeIds.map(id => ({
+    value: id,
+    // Only use getUserName if users are loaded
+    label: users.length > 0 ? getUserName(id) : `User ${id}`
+  }));
+
+  // Update URL with filter values
+  const updateFilters = ({
+    newStatus = statusFilter,
+    newSearch = searchQuery,
+    newAssignees = assigneeFilter
+  }) => {
+    if (!users.length) return; // Don't update if users aren't loaded yet
+    
+    // Create new URLSearchParams but don't modify existing URL until we're sure we need to
+    const currentUrl = new URL(window.location.href);
+    const params = new URLSearchParams(currentUrl.search);
+    const oldParams = new URLSearchParams(currentUrl.search);
+    
+    // Handle status filter
+    if (newStatus === 'all') {
+      params.delete('status');
+    } else {
+      params.set('status', newStatus);
+    }
+
+    // Handle search filter
+    if (!newSearch) {
+      params.delete('search');
+    } else {
+      params.set('search', newSearch);
+    }
+
+    // Handle assignee filter
+    if (newAssignees.length === 0) {
+      params.delete('assignees');
+    } else {
+      params.set('assignees', newAssignees.map(a => a.value).join(','));
+    }
+
+    // Compare old and new params
+    const oldParamsString = oldParams.toString();
+    const newParamsString = params.toString();
+
+    // Only update if there's an actual change
+    if (oldParamsString !== newParamsString) {
+      const newUrl = newParamsString ? `?${newParamsString}` : '/';
+      router.push(newUrl, { scroll: false });
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== searchQuery) {
+        updateFilters({ newSearch: localSearch });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
+  // Update assignee labels when users are loaded
+  useEffect(() => {
+    if (users.length > 0 && assigneeIds.length > 0) {
+      const updatedAssignees = assigneeIds.map(id => ({
+        value: id,
+        label: getUserName(id)
+      }));
+      // Only update if the labels have actually changed
+      const currentAssigneeLabels = assigneeFilter.map(a => a.label).join(',');
+      const newAssigneeLabels = updatedAssignees.map(a => a.label).join(',');
+      if (currentAssigneeLabels !== newAssigneeLabels) {
+        updateFilters({ newAssignees: updatedAssignees });
+      }
+    }
+  }, [users]);
 
   const fetchTodos = async (pageNum?: number) => {
     try {
@@ -100,11 +198,6 @@ export default function TaskTable() {
 
   const handleDeleteClick = (todo: Todo) => setTodoToDelete(todo);
   const handleEditClick = (todo: Todo) => setTodoToEdit(todo);
-
-  const getUserName = (userId: number): string => {
-    const user = users.find((u: User) => u.id === userId);
-    return user ? user.name : "Unknown";
-  };
 
   // Filter todos based on status and search query
   const filteredTodos = todos.filter(todo => {
@@ -165,7 +258,7 @@ export default function TaskTable() {
         <div className="flex items-center space-x-2">
           <Select
             value={statusFilter}
-            onValueChange={setStatusFilter}
+            onValueChange={(value) => updateFilters({ newStatus: value })}
           >
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Status" />
@@ -178,26 +271,38 @@ export default function TaskTable() {
           </Select>
           <div className="w-[200px]">
             <MultipleSelector
-              value={assigneeFilter}
-              onChange={setAssigneeFilter}
-              options={users.map(user => ({
-                label: user.name,
-                value: String(user.id)
-              }))}
-              placeholder="Filter by assignee"
+              value={assigneeIds.map(id => {
+                console.log('Processing assignee ID:', id);
+                const name = getUserName(id);
+                console.log('Got name:', name);
+                return {
+                  value: String(id),
+                  label: name
+                };
+              })}
+              onChange={(value) => {
+                console.log('Selected values:', value);
+                updateFilters({ newAssignees: value });
+              }}
+              options={users.map(user => {
+                console.log('Creating option for user:', user);
+                return {
+                  label: user.name,
+                  value: String(user.id)
+                };
+              })}
+              placeholder={users.length ? "Filter by assignee" : "Loading..."}
+              className={users.length ? "" : "opacity-50 pointer-events-none"}
             />
           </div>
           <div className="flex w-full max-w-sm items-center space-x-2">
             <Input
               type="text"
               placeholder="Search todos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-[200px]"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              className=""
             />
-            <Button type="submit" size="icon">
-              <Search className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </div>
@@ -264,7 +369,7 @@ export default function TaskTable() {
               <PaginationItem>
                 <PaginationPrevious
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className={page === 1 ? "my-4 pointer-events-none opacity-50" : ""}
+                  className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 >
                   Previous
                 </PaginationPrevious>
@@ -275,7 +380,7 @@ export default function TaskTable() {
                     <PaginationEllipsis />
                   </PaginationItem>
                 ) : (
-                  <PaginationItem key={item}>
+                  <PaginationItem key={item} className="cursor-pointer">
                     <PaginationLink
                       onClick={() => setPage(item)}
                       isActive={page === item}
@@ -288,7 +393,7 @@ export default function TaskTable() {
               <PaginationItem>
                 <PaginationNext
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className={page === totalPages ? "pointer-events-none opacity-50" : ""}
+                  className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 >
                   Next
                 </PaginationNext>

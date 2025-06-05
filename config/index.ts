@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://jsonplaceholder.typicode.com',
+  BASE_URL: 'https://jsonplaceholder.typicode.com',
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
 };

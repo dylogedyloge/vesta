@@ -2,8 +2,8 @@
 
 import { Todo } from "@/types";
 import { todoApi } from "@/lib/api/todos";
-import { userApi } from "@/lib/api/users";
 import { revalidatePath } from "next/cache";
+import { API_CONFIG } from "@/config";
 
 let mockTodoId = 1000;
 
@@ -73,13 +73,14 @@ export async function updateTodo(id: number, todo: Partial<Todo>) {
 
 export async function getTodoById(id: string) {
   try {
-    const todo = await todoApi.getTodoById(id);
-    return { data: todo, error: null };
+    const response = await fetch(`${API_CONFIG.BASE_URL}/todos/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch todo');
+    }
+    const data: Todo = await response.json();
+    return { data, error: null };
   } catch (error) {
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : 'Failed to fetch todo'
-    };
+    return { data: null, error: error instanceof Error ? error.message : 'Failed to fetch todo' };
   }
 }
 
