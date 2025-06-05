@@ -14,8 +14,11 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
     
     // Return mock data for UI
     const newTodo: Todo = {
-      id: mockTodoId++,
-      ...todo
+      id: String(mockTodoId++),
+      ...todo,
+      userId: String(todo.userId),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     revalidatePath('/');
@@ -23,8 +26,11 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
   } catch (error) {
     // Even if API fails, return mock data
     const newTodo: Todo = {
-      id: mockTodoId++,
-      ...todo
+      id: String(mockTodoId++),
+      ...todo,
+      userId: String(todo.userId),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     return { data: newTodo, error: null };
@@ -50,10 +56,12 @@ export async function updateTodo(id: number, todo: Partial<Todo>) {
     
     // Return mock data for UI
     const updatedTodo: Todo = {
-      id,
+      id: String(id),
       title: todo.title || '',
       completed: todo.completed || false,
-      userId: todo.userId || 0
+      userId: String(todo.userId || 0),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     revalidatePath('/');
@@ -61,10 +69,12 @@ export async function updateTodo(id: number, todo: Partial<Todo>) {
   } catch (error) {
     // Even if API fails, return mock data
     const updatedTodo: Todo = {
-      id,
+      id: String(id),
       title: todo.title || '',
       completed: todo.completed || false,
-      userId: todo.userId || 0
+      userId: String(todo.userId || 0),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     return { data: updatedTodo, error: null };
