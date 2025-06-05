@@ -2,7 +2,6 @@
 
 import { Todo } from "@/types";
 import { todoApi } from "@/lib/api/todos";
-import { revalidatePath } from "next/cache";
 import { API_CONFIG } from "@/config";
 
 let mockTodoId = 1000;
