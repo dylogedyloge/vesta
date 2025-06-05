@@ -18,27 +18,23 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { EditTodoDialogProps } from "@/types"
-import { QUERY_KEYS } from "@/config"
-
-
+import { updateTodo } from "@/app/actions/todos"
+import { toast } from "sonner"
 
 export function EditTodoDialog({
   todo,
   users,
   isOpen,
   onOpenChange,
-  isMobile,
   onEditSuccess
 }: EditTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     completed: false,
-    userId: users[0]?.id || 0
+    userId: 0
   })
-  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (todo) {
@@ -51,32 +47,30 @@ export function EditTodoDialog({
   }, [todo])
 
   const handleSubmit = async () => {
-    if (!todo) return
+    if (!todo) return;
+    setIsSubmitting(true);
 
-    try {
-      setIsSubmitting(true)
-      
-      // Update local state regardless of todo origin
-      onOpenChange(false)
-      onEditSuccess({
-        ...formData,
-        id: todo.id
-      })
-
-      // Invalidate queries
-      if (isMobile) {
-        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TODOS] })
-      } else {
-        await queryClient.invalidateQueries({ queryKey: ['regularTodos'] })
+    const promise = updateTodo(todo.id, formData).then((result) => {
+      if (result.error) {
+        throw new Error(result.error);
       }
-    } catch (error) {
-      console.error('Failed to update todo:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
+      if (result.data) {
+        onEditSuccess(result.data);
+        onOpenChange(false);
+      }
+      return result;
+    }).finally(() => {
+      setIsSubmitting(false);
+    });
+
+    toast.promise(promise, {
+      loading: 'Updating todo...',
+      success: 'Todo updated successfully',
+      error: (err) => err.message || 'Failed to update todo'
+    });
   }
 
-  if (!todo) return null
+  if (!todo) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -84,7 +78,7 @@ export function EditTodoDialog({
         <DialogHeader>
           <DialogTitle>Edit Todo</DialogTitle>
           <DialogDescription>
-            Make changes to your todo here. Click save when you're done.
+            Make changes to the todo task.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -135,7 +129,7 @@ export function EditTodoDialog({
             onClick={handleSubmit}
             disabled={isSubmitting || !formData.title || !formData.userId}
           >
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

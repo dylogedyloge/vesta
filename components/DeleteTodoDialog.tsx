@@ -8,11 +8,9 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import { QUERY_KEYS } from "@/config"
 import { DeleteTodoDialogProps } from "@/types"
-
-
+import { deleteTodo } from "@/app/actions/todos"
+import { toast } from "sonner"
 
 export function DeleteTodoDialog({
   todoId,
@@ -23,27 +21,24 @@ export function DeleteTodoDialog({
   onDeleteSuccess
 }: DeleteTodoDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false)
-  const queryClient = useQueryClient()
 
   const handleDelete = async () => {
-    try {
-      setIsDeleting(true)
-      
-      // Update local state
-      onOpenChange(false)
-      onDeleteSuccess(todoId)
-
-      // Invalidate queries
-      if (isMobile) {
-        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TODOS] })
-      } else {
-        await queryClient.invalidateQueries({ queryKey: ['regularTodos'] })
+    const promise = deleteTodo(todoId).then((result) => {
+      if (result.error) {
+        throw new Error(result.error);
       }
-    } catch (error) {
-      console.error('Failed to delete todo:', error)
-    } finally {
-      setIsDeleting(false)
-    }
+      if (result.data) {
+        onDeleteSuccess(result.data);
+        onOpenChange(false);
+      }
+      return result;
+    });
+
+    toast.promise(promise, {
+      loading: 'Deleting todo...',
+      success: 'Todo deleted successfully',
+      error: (err) => err.message || 'Failed to delete todo'
+    });
   }
 
   return (
@@ -72,7 +67,7 @@ export function DeleteTodoDialog({
             disabled={isDeleting}
             className="ml-2"
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

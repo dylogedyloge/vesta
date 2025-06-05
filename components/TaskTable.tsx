@@ -2,8 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { TableSkeleton } from "./TableSkeleton";
@@ -19,10 +18,10 @@ import { MultipleSelector, Option } from "./ui/multiple-selector";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
-import { useTodos } from "@/hooks/useTodos";
 import { PAGINATION } from "@/config";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
-import { userApi } from "@/lib/api/users";
+import { getTodos } from "@/app/actions/todos";
+import { getUsers } from "@/app/actions/users";
 
 export default function TaskTable() {
   const [page, setPage] = useState(1);
@@ -34,37 +33,73 @@ export default function TaskTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<Option[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
 
-  const {
-    todos,
-    isLoading,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    handleCreate,
-    handleUpdate,
-    handleDelete
-  } = useTodos(isMobile, pageSize);
+  const fetchTodos = async (pageNum?: number) => {
+    try {
+      setIsFetchingNextPage(true);
+      const result = await getTodos(pageNum, pageSize);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      if (result.data) {
+        if (pageNum && pageNum > 1) {
+          setTodos(prev => [...prev, ...result.data]);
+        } else {
+          setTodos(result.data);
+        }
+        setHasNextPage(result.data.length === pageSize);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch todos');
+    } finally {
+      setIsFetchingNextPage(false);
+    }
+  };
 
-  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
-    queryKey: ['users'],
-    queryFn: userApi.getUsers
-  });
+  const fetchUsers = async () => {
+    try {
+      const result = await getUsers();
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      if (result.data) {
+        setUsers(result.data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    }
+  };
 
-  const handleDeleteClick = (todo: Todo) => setTodoToDelete(todo);
-  const handleEditClick = (todo: Todo) => setTodoToEdit(todo);
-  const handleDeleteSuccess = async (todoId: number) => await handleDelete(todoId);
-  const handleEditSuccess = async (editedTodo: Todo) => await handleUpdate(editedTodo.id, editedTodo);
-  const handleCreateSuccess = async (newTodo: Omit<Todo, 'id'>) => await handleCreate(newTodo);
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      await Promise.all([
+        fetchTodos(1),
+        fetchUsers()
+      ]);
+      setIsLoading(false);
+    };
+
+    fetchInitialData();
+  }, []);
 
   const loadMore = () => {
     if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+      const nextPage = Math.ceil(todos.length / pageSize) + 1;
+      fetchTodos(nextPage);
     }
   };
 
   const { observerTarget } = useInfiniteScroll(loadMore);
+
+  const handleDeleteClick = (todo: Todo) => setTodoToDelete(todo);
+  const handleEditClick = (todo: Todo) => setTodoToEdit(todo);
 
   const getUserName = (userId: number): string => {
     const user = users.find((u: User) => u.id === userId);
@@ -110,192 +145,214 @@ export default function TaskTable() {
     ? filteredTodos.slice((page - 1) * pageSize, page * pageSize)
     : filteredTodos;
 
-  if (isLoading || usersLoading) {
+  if (isLoading) {
     return <TableSkeleton />;
   }
 
   if (error) {
-    return <div>Error loading todos</div>;
+    return <div>Error loading todos: {error}</div>;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto py-10">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => setIsCreateDialogOpen(true)}
-            size="sm"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Todo
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Todo
           </Button>
           <ThemeToggle />
         </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search todos..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex items-center space-x-2">
+          <Select
+            value={statusFilter}
+            onValueChange={setStatusFilter}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="w-[200px]">
+            <MultipleSelector
+              value={assigneeFilter}
+              onChange={setAssigneeFilter}
+              options={users.map(user => ({
+                label: user.name,
+                value: String(user.id)
+              }))}
+              placeholder="Filter by assignee"
+            />
+          </div>
+          <div className="flex w-full max-w-sm items-center space-x-2">
+            <Input
+              type="text"
+              placeholder="Search todos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-[200px]"
+            />
+            <Button type="submit" size="icon">
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <Select
-          value={statusFilter}
-          onValueChange={setStatusFilter}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
-        <MultipleSelector
-          value={assigneeFilter}
-          onChange={setAssigneeFilter}
-          options={users.map((user: User) => ({
-            label: user.name,
-            value: String(user.id)
-          }))}
-          placeholder="Filter by assignee"
-        />
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Todo</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Assignee</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedTodos.map(todo => (
-            <TableRow key={todo.id}>
-              <TableCell>{todo.title}</TableCell>
-              <TableCell>
-                <Badge variant={todo.completed ? "default" : "secondary"}>
-                  {todo.completed ? "Completed" : "Pending"}
-                </Badge>
-              </TableCell>
-              <TableCell>{getUserName(todo.userId)}</TableCell>
-              <TableCell className="space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleEditClick(todo)}
-                >
-                  Edit
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => handleDeleteClick(todo)}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  asChild
-                >
-                  <Link href={`/todos/${todo.id}`}>
-                    Detail
-                  </Link>
-                </Button>
-              </TableCell>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Assignee</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {paginatedTodos.map((todo) => (
+              <TableRow key={todo.id}>
+                <TableCell>
+                  <Link href={`/todo/${todo.id}`} className="hover:underline">
+                    {todo.title}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={todo.completed ? "default" : "secondary"}>
+                    {todo.completed ? "Completed" : "Pending"}
+                  </Badge>
+                </TableCell>
+                <TableCell>{getUserName(todo.userId)}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEditClick(todo)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => handleDeleteClick(todo)}
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    asChild
+                  >
+                    <Link href={`/todo/${todo.id}`}>
+                      Details
+                    </Link>
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-      <DeleteTodoDialog
-        todoId={todoToDelete?.id ?? 0}
-        todoTitle={todoToDelete?.title ?? ""}
-        isOpen={todoToDelete !== null}
-        onOpenChange={(open) => !open && setTodoToDelete(null)}
-        isMobile={isMobile}
-        onDeleteSuccess={handleDeleteSuccess}
-      />
+      {!isMobile && totalPages > 1 && (
+        <div className="mt-4 flex justify-center">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                >
+                  Previous
+                </PaginationLink>
+              </PaginationItem>
+              {getPaginationItems(page, totalPages).map((item, index) => (
+                item === "ellipsis" ? (
+                  <PaginationItem key={`ellipsis-${index}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={item}>
+                    <PaginationLink
+                      onClick={() => setPage(item)}
+                      isActive={page === item}
+                    >
+                      {item}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              ))}
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className={page === totalPages ? "pointer-events-none opacity-50" : ""}
+                >
+                  Next
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
-      <EditTodoDialog
-        todo={todoToEdit}
-        users={users}
-        isOpen={todoToEdit !== null}
-        onOpenChange={(open) => !open && setTodoToEdit(null)}
-        isMobile={isMobile}
-        onEditSuccess={handleEditSuccess}
-      />
+      {isMobile && hasNextPage && (
+        <div ref={observerTarget} className="flex justify-center p-4">
+          {isFetchingNextPage ? (
+            <Skeleton className="h-8 w-[100px]" />
+          ) : (
+            <Button variant="ghost" onClick={loadMore}>
+              Load More
+            </Button>
+          )}
+        </div>
+      )}
 
       <CreateTodoDialog
         users={users}
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         isMobile={isMobile}
-        onCreateSuccess={handleCreateSuccess}
+        onCreateSuccess={async (newTodo) => {
+          const result = await getTodos();
+          if (result.data) {
+            setTodos(result.data);
+          }
+        }}
       />
 
-      {/* Pagination or Infinite Scroll */}
-      {isMobile ? (
-        <div ref={observerTarget} className="w-full py-4">
-          {isFetchingNextPage && (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-[250px] mx-auto" />
-              <Skeleton className="h-4 w-[200px] mx-auto" />
-              <Skeleton className="h-4 w-[150px] mx-auto" />
-            </div>
-          )}
-          {!isFetchingNextPage && hasNextPage && (
-            <div className="text-center prose-sm">Scroll for more</div>
-          )}
-          {!hasNextPage && (
-            <div className="text-center prose-sm">No more todos</div>
-          )}
-        </div>
-      ) : (
-        filteredTodos.length > 0 && (
-          <Pagination className="mt-4 flex justify-center">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage(page - 1)}
-                  aria-disabled={page === 1}
-                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-              {getPaginationItems(page, totalPages).map((item, idx) =>
-                item === "ellipsis" ? (
-                  <PaginationItem key={`ellipsis-${idx}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={item}>
-                    <PaginationLink
-                      isActive={page === item}
-                      onClick={() => setPage(Number(item))}
-                    >
-                      {item}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              )}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setPage(page + 1)}
-                  aria-disabled={page === totalPages}
-                  className={page === totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        )
+      {todoToEdit && (
+        <EditTodoDialog
+          todo={todoToEdit}
+          users={users}
+          isOpen={!!todoToEdit}
+          onOpenChange={() => setTodoToEdit(null)}
+          isMobile={isMobile}
+          onEditSuccess={async (editedTodo) => {
+            const result = await getTodos();
+            if (result.data) {
+              setTodos(result.data);
+            }
+          }}
+        />
+      )}
+
+      {todoToDelete && (
+        <DeleteTodoDialog
+          todoId={todoToDelete.id}
+          todoTitle={todoToDelete.title}
+          isOpen={!!todoToDelete}
+          onOpenChange={() => setTodoToDelete(null)}
+          isMobile={isMobile}
+          onDeleteSuccess={async () => {
+            const result = await getTodos();
+            if (result.data) {
+              setTodos(result.data);
+            }
+          }}
+        />
       )}
     </div>
   );

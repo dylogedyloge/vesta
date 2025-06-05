@@ -18,9 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { CreateTodoDialogProps } from "@/types"
-import { QUERY_KEYS } from "@/config"
+import { createTodo } from "@/app/actions/todos"
+import { toast } from "sonner"
 
 export function CreateTodoDialog({
   users,
@@ -35,27 +35,24 @@ export function CreateTodoDialog({
     completed: false,
     userId: users[0]?.id || 0
   })
-  const queryClient = useQueryClient()
 
   const handleSubmit = async () => {
-    try {
-      setIsSubmitting(true)
-      
-      // Update local state
-      onOpenChange(false)
-      onCreateSuccess(formData)
-
-      // Invalidate queries
-      if (isMobile) {
-        await queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TODOS] })
-      } else {
-        await queryClient.invalidateQueries({ queryKey: ['regularTodos'] })
+    const promise = createTodo(formData).then((result) => {
+      if (result.error) {
+        throw new Error(result.error);
       }
-    } catch (error) {
-      console.error('Failed to create todo:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
+      if (result.data) {
+        onCreateSuccess(result.data);
+        onOpenChange(false);
+      }
+      return result;
+    });
+
+    toast.promise(promise, {
+      loading: 'Creating todo...',
+      success: 'Todo created successfully',
+      error: (err) => err.message || 'Failed to create todo'
+    });
   }
 
   return (
@@ -116,7 +113,7 @@ export function CreateTodoDialog({
             onClick={handleSubmit}
             disabled={isSubmitting || !formData.title || !formData.userId}
           >
-            {isSubmitting ? "Creating..." : "Create Todo"}
+            Create Todo
           </Button>
         </DialogFooter>
       </DialogContent>
