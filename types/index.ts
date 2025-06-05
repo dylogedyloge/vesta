@@ -47,16 +47,14 @@ export interface CreateTodoDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isMobile: boolean;
-  onCreateSuccess: (newTodo: Omit<Todo, 'id'>) => void;
 }
 
 export interface EditTodoDialogProps {
-  todo: Todo | null;
+  todo: Todo;
   users: User[];
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isMobile: boolean;
-  onEditSuccess: (editedTodo: Todo) => void;
 }
 
 export interface DeleteTodoDialogProps {
@@ -65,7 +63,6 @@ export interface DeleteTodoDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   isMobile: boolean;
-  onDeleteSuccess: (todoId: number) => void;
 }
 
 // UI Component Types

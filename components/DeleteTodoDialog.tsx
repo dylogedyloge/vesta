@@ -11,6 +11,7 @@ import { useState } from "react"
 import { DeleteTodoDialogProps } from "@/types"
 import { deleteTodo } from "@/app/actions/todos"
 import { toast } from "sonner"
+import { useTodoStore } from "@/store/todoStore"
 
 export function DeleteTodoDialog({
   todoId,
@@ -18,27 +19,31 @@ export function DeleteTodoDialog({
   isOpen,
   onOpenChange,
   isMobile,
-  onDeleteSuccess
 }: DeleteTodoDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const deleteTodoFromStore = useTodoStore(state => state.deleteTodo)
 
   const handleDelete = async () => {
+    setIsSubmitting(true)
+
     const promise = deleteTodo(todoId).then((result) => {
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error)
       }
       if (result.data) {
-        onDeleteSuccess(result.data);
-        onOpenChange(false);
+        deleteTodoFromStore(todoId)
+        onOpenChange(false)
       }
-      return result;
-    });
+      return result
+    }).finally(() => {
+      setIsSubmitting(false)
+    })
 
     toast.promise(promise, {
       loading: 'Deleting todo...',
       success: 'Todo deleted successfully',
       error: (err) => err.message || 'Failed to delete todo'
-    });
+    })
   }
 
   return (
@@ -57,14 +62,14 @@ export function DeleteTodoDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isDeleting}
+            disabled={isSubmitting}
             className="ml-2"
           >
             Delete

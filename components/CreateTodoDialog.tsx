@@ -17,17 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CreateTodoDialogProps } from "@/types"
 import { createTodo } from "@/app/actions/todos"
 import { toast } from "sonner"
+import { useTodoStore } from "@/store/todoStore"
 
 export function CreateTodoDialog({
   users,
   isOpen,
   onOpenChange,
   isMobile,
-  onCreateSuccess
 }: CreateTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -36,23 +36,37 @@ export function CreateTodoDialog({
     userId: users[0]?.id || 0
   })
 
+  const addTodo = useTodoStore(state => state.addTodo)
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        title: "",
+        completed: false,
+        userId: users[0]?.id || 0
+      })
+    }
+  }, [isOpen, users])
+
   const handleSubmit = async () => {
-    const promise = createTodo(formData).then((result) => {
+    if (!formData.title || !formData.userId) return
+    
+    setIsSubmitting(true)
+    try {
+      const result = await createTodo(formData)
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error)
       }
       if (result.data) {
-        onCreateSuccess(result.data);
-        onOpenChange(false);
+        addTodo(result.data)
+        toast.success('Todo created successfully')
+        onOpenChange(false)
       }
-      return result;
-    });
-
-    toast.promise(promise, {
-      loading: 'Creating todo...',
-      success: 'Todo created successfully',
-      error: (err) => err.message || 'Failed to create todo'
-    });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create todo')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -70,7 +84,7 @@ export function CreateTodoDialog({
             <Input
               id="title"
               value={formData.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Enter todo title..."
             />
           </div>
@@ -78,7 +92,7 @@ export function CreateTodoDialog({
             <Label htmlFor="assignee">Assignee</Label>
             <Select
               value={String(formData.userId)}
-              onValueChange={(value: string) => setFormData(prev => ({ ...prev, userId: Number(value) }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, userId: Number(value) }))}
             >
               <SelectTrigger id="assignee">
                 <SelectValue placeholder="Select an assignee" />
@@ -97,7 +111,7 @@ export function CreateTodoDialog({
             <Switch
               id="completed"
               checked={formData.completed}
-              onCheckedChange={(checked: boolean) => setFormData(prev => ({ ...prev, completed: checked }))}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, completed: checked }))}
             />
           </div>
         </div>

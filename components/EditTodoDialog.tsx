@@ -21,13 +21,13 @@ import { useState, useEffect } from "react"
 import { EditTodoDialogProps } from "@/types"
 import { updateTodo } from "@/app/actions/todos"
 import { toast } from "sonner"
+import { useTodoStore } from "@/store/todoStore"
 
 export function EditTodoDialog({
   todo,
   users,
   isOpen,
   onOpenChange,
-  onEditSuccess
 }: EditTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -35,6 +35,8 @@ export function EditTodoDialog({
     completed: false,
     userId: 0
   })
+
+  const updateTodoInStore = useTodoStore(state => state.updateTodo)
 
   useEffect(() => {
     if (todo) {
@@ -55,7 +57,7 @@ export function EditTodoDialog({
         throw new Error(result.error);
       }
       if (result.data) {
-        onEditSuccess(result.data);
+        updateTodoInStore(result.data);
         onOpenChange(false);
       }
       return result;

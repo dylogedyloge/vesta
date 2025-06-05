@@ -22,6 +22,7 @@ import { PAGINATION } from "@/config";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
 import { getTodos } from "@/app/actions/todos";
 import { getUsers } from "@/app/actions/users";
+import { useTodoStore } from "@/store/todoStore";
 
 export default function TaskTable() {
   const [page, setPage] = useState(1);
@@ -35,25 +36,24 @@ export default function TaskTable() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [todos, setTodos] = useState<Todo[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
 
+  const todos = useTodoStore((state) => state.todos);
+  const setInitialTodos = useTodoStore((state) => state.setInitialTodos);
+
   const fetchTodos = async (pageNum?: number) => {
     try {
       setIsFetchingNextPage(true);
-      const result = await getTodos(pageNum, pageSize);
+      // Fetch all todos initially
+      const result = await getTodos();
       if (result.error) {
         throw new Error(result.error);
       }
       if (result.data) {
-        if (pageNum && pageNum > 1) {
-          setTodos(prev => [...prev, ...result.data]);
-        } else {
-          setTodos(result.data);
-        }
-        setHasNextPage(result.data.length === pageSize);
+        setInitialTodos(result.data);
+        setHasNextPage(false); // No more pages since we fetch all at once
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch todos');
@@ -216,7 +216,7 @@ export default function TaskTable() {
             {paginatedTodos.map((todo) => (
               <TableRow key={todo.id}>
                 <TableCell>
-                  <Link href={`/todo/${todo.id}`} className="hover:underline">
+                  <Link href={`/todos/${todo.id}`} className="hover:underline">
                     {todo.title}
                   </Link>
                 </TableCell>
@@ -246,7 +246,7 @@ export default function TaskTable() {
                     size="sm"
                     asChild
                   >
-                    <Link href={`/todo/${todo.id}`}>
+                    <Link href={`/todos/${todo.id}`}>
                       Details
                     </Link>
                   </Button>
@@ -262,12 +262,12 @@ export default function TaskTable() {
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationLink
+                <PaginationPrevious
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                  className={page === 1 ? "my-4 pointer-events-none opacity-50" : ""}
                 >
                   Previous
-                </PaginationLink>
+                </PaginationPrevious>
               </PaginationItem>
               {getPaginationItems(page, totalPages).map((item, index) => (
                 item === "ellipsis" ? (
@@ -286,12 +286,12 @@ export default function TaskTable() {
                 )
               ))}
               <PaginationItem>
-                <PaginationLink
+                <PaginationNext
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   className={page === totalPages ? "pointer-events-none opacity-50" : ""}
                 >
                   Next
-                </PaginationLink>
+                </PaginationNext>
               </PaginationItem>
             </PaginationContent>
           </Pagination>
@@ -315,12 +315,6 @@ export default function TaskTable() {
         isOpen={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         isMobile={isMobile}
-        onCreateSuccess={async (newTodo) => {
-          const result = await getTodos();
-          if (result.data) {
-            setTodos(result.data);
-          }
-        }}
       />
 
       {todoToEdit && (
@@ -330,12 +324,6 @@ export default function TaskTable() {
           isOpen={!!todoToEdit}
           onOpenChange={() => setTodoToEdit(null)}
           isMobile={isMobile}
-          onEditSuccess={async (editedTodo) => {
-            const result = await getTodos();
-            if (result.data) {
-              setTodos(result.data);
-            }
-          }}
         />
       )}
 
@@ -346,12 +334,6 @@ export default function TaskTable() {
           isOpen={!!todoToDelete}
           onOpenChange={() => setTodoToDelete(null)}
           isMobile={isMobile}
-          onDeleteSuccess={async () => {
-            const result = await getTodos();
-            if (result.data) {
-              setTodos(result.data);
-            }
-          }}
         />
       )}
     </div>
