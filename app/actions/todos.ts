@@ -21,7 +21,7 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
       updatedAt: new Date().toISOString()
     };
     
-    revalidatePath('/');
+    // Revalidate after state update
     return { data: newTodo, error: null };
   } catch (error) {
     // Even if API fails, return mock data
@@ -42,7 +42,7 @@ export async function deleteTodo(id: string) {
   try {
     // Try the API call (will fail for JSONPlaceholder)
     await todoApi.deleteTodo(id);
-    revalidatePath('/');
+    // Return before revalidation
     return { data: id, error: null };
   } catch (error) {
     console.log(error);
@@ -51,33 +51,33 @@ export async function deleteTodo(id: string) {
   }
 }
 
-export async function updateTodo(id: number, todo: Partial<Todo>) {
+export async function updateTodo(id: string, todo: Partial<Todo>) {
   try {
     // Try the API call (will fail for JSONPlaceholder)
     await todoApi.updateTodo(id, todo);
     
-    // Return mock data for UI
+    // Return the complete todo object with required fields
     const updatedTodo: Todo = {
       id: String(id),
       title: todo.title || '',
-      completed: todo.completed || false,
-      userId: String(todo.userId || 0),
-      createdAt: new Date().toISOString(),
+      completed: todo.completed ?? false,
+      userId: String(todo.userId || ''),
+      createdAt: todo.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    revalidatePath('/');
+    // Return before revalidation
     return { data: updatedTodo, error: null };
   } catch (error) {
     console.log(error);
 
-    // Even if API fails, return mock data
+    // Even if API fails, return the complete todo object
     const updatedTodo: Todo = {
       id: String(id),
       title: todo.title || '',
-      completed: todo.completed || false,
-      userId: String(todo.userId || 0),
-      createdAt: new Date().toISOString(),
+      completed: todo.completed ?? false,
+      userId: String(todo.userId || ''),
+      createdAt: todo.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     

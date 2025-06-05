@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { EditTodoDialogProps } from "@/types"
+import { EditTodoDialogProps, Todo } from "@/types"
 import { updateTodo } from "@/app/actions/todos"
 import { toast } from "sonner"
 import { useTodoStore } from "@/store/todoStore"
@@ -33,7 +33,7 @@ export function EditTodoDialog({
   const [formData, setFormData] = useState({
     title: "",
     completed: false,
-    userId: 0
+    userId: ""
   })
 
   const updateTodoInStore = useTodoStore(state => state.updateTodo)
@@ -43,7 +43,7 @@ export function EditTodoDialog({
       setFormData({
         title: todo.title,
         completed: todo.completed,
-        userId: todo.userId
+        userId: String(todo.userId)
       })
     }
   }, [todo])
@@ -52,24 +52,30 @@ export function EditTodoDialog({
     if (!todo) return;
     setIsSubmitting(true);
 
-    const promise = updateTodo(todo.id, formData).then((result) => {
+    // Create a complete todo object for the update
+    const updatedTodoData: Todo = {
+      ...todo,
+      title: formData.title,
+      completed: formData.completed,
+      userId: formData.userId,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const result = await updateTodo(todo.id, updatedTodoData);
       if (result.error) {
         throw new Error(result.error);
       }
-      if (result.data) {
-        updateTodoInStore(result.data);
-        onOpenChange(false);
-      }
-      return result;
-    }).finally(() => {
+      
+      // Update the local state immediately
+      updateTodoInStore(updatedTodoData);
+      onOpenChange(false);
+      toast.success('Todo updated successfully');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update todo');
+    } finally {
       setIsSubmitting(false);
-    });
-
-    toast.promise(promise, {
-      loading: 'Updating todo...',
-      success: 'Todo updated successfully',
-      error: (err) => err.message || 'Failed to update todo'
-    });
+    }
   }
 
   if (!todo) return null;
@@ -95,8 +101,8 @@ export function EditTodoDialog({
           <div className="grid gap-2">
             <Label htmlFor="assignee">Assignee</Label>
             <Select
-              value={String(formData.userId)}
-              onValueChange={(value: string) => setFormData(prev => ({ ...prev, userId: Number(value) }))}
+              value={formData.userId}
+              onValueChange={(value: string) => setFormData(prev => ({ ...prev, userId: value }))}
             >
               <SelectTrigger id="assignee">
                 <SelectValue placeholder="Select an assignee" />

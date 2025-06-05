@@ -37,7 +37,7 @@ export interface ApiResponse<T> {
 export interface TodoStore {
   todos: Todo[];
   addTodo: (todo: Todo) => void;
-  editTodo: (todo: Todo) => void;
+  updateTodo: (todo: Todo) => void;
   deleteTodo: (todoId: string) => void;
   setInitialTodos: (todos: Todo[]) => void;
 }

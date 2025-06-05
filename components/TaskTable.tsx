@@ -48,8 +48,10 @@ export default function TaskTable({ initialData }: TaskTableProps) {
 
   // Initialize store with server-side data
   useEffect(() => {
-    setInitialTodos(initialData.todos);
-  }, []);
+    if (initialData.todos) {
+      setInitialTodos(initialData.todos);
+    }
+  }, [initialData.todos]);
 
   // Get filter values from URL
   const statusFilter = searchParams.get('status') || 'all';
@@ -141,18 +143,20 @@ export default function TaskTable({ initialData }: TaskTableProps) {
     }
   }, [users]);
 
+  // Fetch todos when needed
   const fetchTodos = async (pageNum?: number) => {
-    console.log("fetching todos", pageNum);
     try {
       setIsFetchingNextPage(true);
-      // Fetch all todos initially
       const result = await getTodos();
       if (result.error) {
         throw new Error(result.error);
       }
       if (result.data) {
-        setInitialTodos(result.data);
-        setHasNextPage(false); // No more pages since we fetch all at once
+        // Only update if data is different
+        if (JSON.stringify(result.data) !== JSON.stringify(todos)) {
+          setInitialTodos(result.data);
+        }
+        setHasNextPage(false);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch todos');
@@ -186,6 +190,15 @@ export default function TaskTable({ initialData }: TaskTableProps) {
     };
 
     fetchInitialData();
+  }, []);
+
+  // Refetch todos after mutations
+  useEffect(() => {
+    const refetchInterval = setInterval(() => {
+      fetchTodos();
+    }, 5000); // Refetch every 5 seconds
+
+    return () => clearInterval(refetchInterval);
   }, []);
 
   const loadMore = () => {

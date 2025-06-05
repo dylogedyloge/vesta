@@ -25,7 +25,7 @@ export const todoApi = {
     return response.data;
   },
 
-  updateTodo: async (id: number, todo: Partial<Todo>) => {
+  updateTodo: async (id: string, todo: Partial<Todo>) => {
     const response = await axios.put<Todo>(`${API_CONFIG.BASE_URL}/todos/${id}`, todo);
     return response.data;
   },
