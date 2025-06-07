@@ -46,12 +46,12 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   const todos = useTodoStore((state) => state.todos);
   const setInitialTodos = useTodoStore((state) => state.setInitialTodos);
 
-  // Initialize store with server-side data
+  // Initialize store with server-side data only if store is empty
   useEffect(() => {
-    if (initialData.todos) {
+    if (initialData.todos && todos.length === 0) {
       setInitialTodos(initialData.todos);
     }
-  }, [initialData.todos]);
+  }, [initialData.todos, todos.length]);
 
   // Get filter values from URL
   const statusFilter = searchParams.get('status') || 'all';
@@ -143,9 +143,8 @@ export default function TaskTable({ initialData }: TaskTableProps) {
     }
   }, [users]);
 
-  // Fetch todos when needed
+  // Optimize data fetching
   const fetchTodos = async (pageNum?: number) => {
-    console.log(pageNum)
     try {
       setIsFetchingNextPage(true);
       const result = await getTodos();
@@ -153,8 +152,8 @@ export default function TaskTable({ initialData }: TaskTableProps) {
         throw new Error(result.error);
       }
       if (result.data) {
-        // Only update if data is different
-        if (JSON.stringify(result.data) !== JSON.stringify(todos)) {
+        // Only update if data is different and store is empty
+        if (todos.length === 0 || JSON.stringify(result.data) !== JSON.stringify(todos)) {
           setInitialTodos(result.data);
         }
         setHasNextPage(false);
@@ -172,7 +171,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
       if (result.error) {
         throw new Error(result.error);
       }
-      if (result.data) {
+      if (result.data && users.length === 0) {
         setUsers(result.data);
       }
     } catch (err) {
@@ -180,25 +179,32 @@ export default function TaskTable({ initialData }: TaskTableProps) {
     }
   };
 
+  // Only fetch initial data if store is empty
   useEffect(() => {
     const fetchInitialData = async () => {
-      setIsLoading(true);
-      await Promise.all([
-        fetchTodos(1),
-        fetchUsers()
-      ]);
-      setIsLoading(false);
+      if (todos.length === 0 || users.length === 0) {
+        setIsLoading(true);
+        await Promise.all([
+          fetchTodos(1),
+          fetchUsers()
+        ]);
+        setIsLoading(false);
+      }
     };
 
     fetchInitialData();
   }, []);
 
-  // Refetch todos after mutations
+  // Optimize refetch interval
   useEffect(() => {
     const refetchInterval = setInterval(() => {
-      fetchTodos();
-    }, 5000); // Refetch every 5 seconds
+      // Only refetch if the page is visible
+      if (document.visibilityState === 'visible') {
+        fetchTodos();
+      }
+    }, 10000); // Increased interval to 10 seconds
 
+    // Cleanup interval on unmount
     return () => clearInterval(refetchInterval);
   }, []);
 

@@ -3,8 +3,10 @@ import { getTodos } from "@/app/actions/todos";
 import { getUsers } from "@/app/actions/users";
 import { Suspense } from "react";
 
-// Opt into background revalidation
-export const revalidate = 60; // revalidate every 60 seconds
+// Opt into background revalidation and route caching
+export const revalidate = 60;
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-cache';
 
 export default async function Home() {
   // Fetch initial data on the server

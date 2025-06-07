@@ -9,9 +9,8 @@ import { getTodoById } from "@/app/actions/todos";
 import { getUserById } from "@/app/actions/users";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TodoDetailProps,Todo, User } from "@/types";
-
-
+import type { TodoDetailProps, Todo, User } from "@/types";
+import { useTodoStore } from "@/store/todoStore";
 
 export default function TodoDetail({ id, initialData }: TodoDetailProps) {
   const router = useRouter();
@@ -19,39 +18,58 @@ export default function TodoDetail({ id, initialData }: TodoDetailProps) {
   const [user, setUser] = useState<User | null>(initialData?.user || null);
   const [error, setError] = useState<string | null>(initialData?.error || null);
   const [loading, setLoading] = useState(!initialData);
+  
+  const storeTodos = useTodoStore((state) => state.todos);
 
   useEffect(() => {
-    // Only fetch if we don't have initialData
-    if (!initialData) {
-      const fetchData = async () => {
-        setLoading(true);
-        try {
-          const todoResult = await getTodoById(id);
-          if (todoResult.error) {
-            setError(todoResult.error);
-            return;
-          }
-          
-          setTodo(todoResult.data);
-          
-          if (todoResult.data) {
-            const userResult = await getUserById(todoResult.data.userId);
-            if (userResult.error) {
-              setError(userResult.error);
-              return;
-            }
-            setUser(userResult.data);
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "An error occurred");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchData();
+    // Try to find todo in store first
+    const storeData = storeTodos.find(t => t.id === id);
+    
+    if (storeData) {
+      setTodo(storeData);
+      // Only fetch user data if not available
+      if (!user) {
+        fetchUserData(storeData.userId);
+      }
+    } else if (!initialData) {
+      // Only fetch if we don't have data from any source
+      fetchTodoData();
     }
-  }, [id, initialData]);
+  }, [id, initialData, storeTodos]);
+
+  const fetchUserData = async (userId: string) => {
+    try {
+      const userResult = await getUserById(userId);
+      if (userResult.error) {
+        setError(userResult.error);
+        return;
+      }
+      setUser(userResult.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    }
+  };
+
+  const fetchTodoData = async () => {
+    setLoading(true);
+    try {
+      const todoResult = await getTodoById(id);
+      if (todoResult.error) {
+        setError(todoResult.error);
+        return;
+      }
+      
+      setTodo(todoResult.data);
+      
+      if (todoResult.data) {
+        await fetchUserData(todoResult.data.userId);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (

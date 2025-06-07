@@ -5,13 +5,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { useState } from "react"
-import { DeleteTodoDialogProps } from "@/types"
-import { deleteTodo } from "@/app/actions/todos"
-import { toast } from "sonner"
-import { useTodoStore } from "@/store/todoStore"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { deleteTodo } from "@/app/actions/todos";
+import { toast } from "sonner";
+import { useTodoStore } from "@/store/todoStore";
+import { DeleteTodoDialogProps } from "@/types";
 
 export function DeleteTodoDialog({
   todoId,
@@ -19,31 +19,34 @@ export function DeleteTodoDialog({
   isOpen,
   onOpenChange,
 }: DeleteTodoDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const deleteTodoFromStore = useTodoStore(state => state.deleteTodo)
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteTodoFromStore = useTodoStore(state => state.deleteTodo);
+  const rollbackToPreviousState = useTodoStore(state => state.rollbackToPreviousState);
 
   const handleDelete = async () => {
-    setIsSubmitting(true)
+    setIsDeleting(true);
 
-    const promise = deleteTodo(todoId).then((result) => {
+    // Optimistically remove from UI
+    deleteTodoFromStore(todoId);
+    onOpenChange(false);
+
+    try {
+      const result = await deleteTodo(todoId);
       if (result.error) {
-        throw new Error(result.error)
+        throw new Error(result.error);
       }
+      
       if (result.data) {
-        deleteTodoFromStore(todoId)
-        onOpenChange(false)
+        toast.success('Todo deleted successfully');
       }
-      return result
-    }).finally(() => {
-      setIsSubmitting(false)
-    })
-
-    toast.promise(promise, {
-      loading: 'Deleting todo...',
-      success: 'Todo deleted successfully',
-      error: (err) => err.message || 'Failed to delete todo'
-    })
-  }
+    } catch (err) {
+      // Rollback on error
+      rollbackToPreviousState();
+      toast.error(err instanceof Error ? err.message : 'Failed to delete todo');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -52,6 +55,7 @@ export function DeleteTodoDialog({
           <DialogTitle>Delete Todo</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this todo?
+            This action cannot be undone.
           </DialogDescription>
           <p className="mt-2 text-sm border-l-4 border-gray-300 pl-4 py-2">
             {todoTitle}
@@ -61,20 +65,20 @@ export function DeleteTodoDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={isDeleting}
           >
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isSubmitting}
+            disabled={isDeleting}
             className="ml-2"
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 } 

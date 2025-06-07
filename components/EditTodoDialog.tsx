@@ -31,19 +31,20 @@ export function EditTodoDialog({
 }: EditTodoDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    title: "",
-    completed: false,
-    userId: ""
+    title: todo?.title || "",
+    completed: todo?.completed || false,
+    userId: String(todo?.userId || users[0]?.id || ""),
   })
 
   const updateTodoInStore = useTodoStore(state => state.updateTodo)
+  const rollbackToPreviousState = useTodoStore(state => state.rollbackToPreviousState)
 
   useEffect(() => {
     if (todo) {
       setFormData({
         title: todo.title,
         completed: todo.completed,
-        userId: String(todo.userId)
+        userId: String(todo.userId),
       })
     }
   }, [todo])
@@ -52,8 +53,8 @@ export function EditTodoDialog({
     if (!todo) return;
     setIsSubmitting(true);
 
-    // Create a complete todo object for the update
-    const updatedTodoData: Todo = {
+    // Create optimistic update
+    const optimisticTodo: Todo = {
       ...todo,
       title: formData.title,
       completed: formData.completed,
@@ -61,18 +62,26 @@ export function EditTodoDialog({
       updatedAt: new Date().toISOString()
     };
 
+    // Apply optimistic update
+    updateTodoInStore(optimisticTodo);
+    onOpenChange(false);
+
     try {
-      const result = await updateTodo(todo.id, updatedTodoData);
+      const result = await updateTodo(todo.id, optimisticTodo);
       if (result.error) {
         throw new Error(result.error);
       }
       
-      // Update the local state immediately
-      updateTodoInStore(updatedTodoData);
-      onOpenChange(false);
-      toast.success('Todo updated successfully');
+      if (result.data) {
+        // Update with actual server data
+        updateTodoInStore(result.data);
+        toast.success('Todo updated successfully');
+      }
     } catch (err) {
+      // Rollback on error
+      rollbackToPreviousState();
       toast.error(err instanceof Error ? err.message : 'Failed to update todo');
+      onOpenChange(true); // Reopen dialog to preserve user input
     } finally {
       setIsSubmitting(false);
     }

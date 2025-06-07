@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { CreateTodoDialogProps } from "@/types"
+import { CreateTodoDialogProps, Todo } from "@/types"
 import { createTodo } from "@/app/actions/todos"
 import { toast } from "sonner"
 import { useTodoStore } from "@/store/todoStore"
@@ -38,6 +38,7 @@ export function CreateTodoDialog({
   })
 
   const addTodo = useTodoStore(state => state.addTodo)
+  const rollbackToPreviousState = useTodoStore(state => state.rollbackToPreviousState)
 
   useEffect(() => {
     if (!isOpen) {
@@ -55,18 +56,35 @@ export function CreateTodoDialog({
     if (!formData.title || !formData.userId) return
     
     setIsSubmitting(true)
+    
+    // Create optimistic todo
+    const optimisticTodo: Todo = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      ...formData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    // Optimistically update UI
+    addTodo(optimisticTodo)
+    onOpenChange(false)
+    
     try {
       const result = await createTodo(formData)
       if (result.error) {
         throw new Error(result.error)
       }
+      
       if (result.data) {
+        // Replace optimistic todo with real one
         addTodo(result.data)
         toast.success('Todo created successfully')
-        onOpenChange(false)
       }
     } catch (err) {
+      // Rollback on error
+      rollbackToPreviousState()
       toast.error(err instanceof Error ? err.message : 'Failed to create todo')
+      onOpenChange(true) // Reopen dialog to preserve user input
     } finally {
       setIsSubmitting(false)
     }
