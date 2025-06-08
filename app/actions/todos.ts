@@ -3,8 +3,34 @@
 import { Todo } from "@/types";
 import { todoApi } from "@/lib/api/todos";
 import { API_CONFIG } from "@/config";
+import { generateSlug } from "@/lib/utils";
 
 let mockTodoId = 1000;
+
+export async function getTodos(page?: number, limit?: number) {
+  try {
+    const todos = await todoApi.getTodos(page, limit);
+    return { data: todos, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to fetch todos'
+    };
+  }
+}
+
+export async function getTodoById(id: string) {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/todos/${id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch todo');
+    }
+    const data: Todo = await response.json();
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Failed to fetch todo' };
+  }
+}
 
 export async function createTodo(todo: Omit<Todo, 'id'>) {
   try {
@@ -34,19 +60,6 @@ export async function createTodo(todo: Omit<Todo, 'id'>) {
     };
     
     return { data: newTodo, error: null };
-  }
-}
-
-export async function deleteTodo(id: string) {
-  try {
-    // Try the API call (will fail for JSONPlaceholder)
-    await todoApi.deleteTodo(id);
-    // Return before revalidation
-    return { data: id, error: null };
-  } catch (error) {
-    console.log(error);
-    // Even if API fails, return success for UI
-    return { data: id, error: null };
   }
 }
 
@@ -84,27 +97,52 @@ export async function updateTodo(id: string, todo: Partial<Todo>) {
   }
 }
 
-export async function getTodoById(id: string) {
+export async function deleteTodo(id: string) {
   try {
-    const response = await fetch(`${API_CONFIG.BASE_URL}/todos/${id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch todo');
-    }
-    const data: Todo = await response.json();
-    return { data, error: null };
+    // Try the API call (will fail for JSONPlaceholder)
+    await todoApi.deleteTodo(id);
+    // Return before revalidation
+    return { data: id, error: null };
   } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : 'Failed to fetch todo' };
+    console.log(error);
+    // Even if API fails, return success for UI
+    return { data: id, error: null };
   }
 }
 
-export async function getTodos(page?: number, limit?: number) {
+export async function getTodoBySlug(slug: string) {
   try {
-    const todos = await todoApi.getTodos(page, limit);
-    return { data: todos, error: null };
-  } catch (error) {
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : 'Failed to fetch todos'
+    // Get all todos
+    const response = await fetch(`${API_CONFIG.BASE_URL}/todos`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch todos');
+    }
+    
+    const todos = await response.json() as Array<{
+      id: number;
+      title: string;
+      completed: boolean;
+      userId: number;
+    }>;
+    
+    // Find the todo with matching slug
+    const todo = todos.find(t => generateSlug(t.title) === slug);
+    if (!todo) {
+      return { data: null, error: 'Todo not found' };
+    }
+
+    // Normalize the todo data
+    const normalizedTodo: Todo = {
+      ...todo,
+      id: String(todo.id),
+      userId: String(todo.userId),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
+
+    return { data: normalizedTodo, error: null };
+  } catch (error) {
+    console.error('Error in getTodoBySlug:', error);
+    return { data: null, error: error instanceof Error ? error.message : 'Failed to fetch todo' };
   }
 } 

@@ -24,6 +24,7 @@ import { getTodos } from "@/app/actions/todos";
 import { getUsers } from "@/app/actions/users";
 import { useTodoStore } from "@/store/todoStore";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { generateSlug } from "@/lib/utils";
 
 
 
@@ -220,6 +221,11 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   const handleDeleteClick = (todo: Todo) => setTodoToDelete(todo);
   const handleEditClick = (todo: Todo) => setTodoToEdit(todo);
 
+  const handleRowClick = (todo: Todo) => {
+    const slug = generateSlug(todo.title, todo.id);
+    router.push(`/todos/${slug}`);
+  };
+
   // Filter todos based on status and search query
   const filteredTodos = todos.filter(todo => {
     const matchesStatus = statusFilter === "all" || 
@@ -342,7 +348,10 @@ export default function TaskTable({ initialData }: TaskTableProps) {
             {paginatedTodos.map((todo) => (
               <TableRow key={todo.id}>
                 <TableCell>
-                  <Link href={`/todos/${todo.id}`} className="hover:underline">
+                  <Link 
+                    href={`/todos/${todo.id}`} 
+                    className="hover:underline"
+                  >
                     {todo.title}
                   </Link>
                 </TableCell>

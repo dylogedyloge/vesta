@@ -21,6 +21,10 @@ export default function TodoDetail({ id, initialData }: TodoDetailProps) {
   
   const storeTodos = useTodoStore((state) => state.todos);
 
+  const handleBack = () => {
+    router.push('/');
+  };
+
   useEffect(() => {
     // Try to find todo in store first
     const storeData = storeTodos.find(t => t.id === id);
@@ -71,52 +75,7 @@ export default function TodoDetail({ id, initialData }: TodoDetailProps) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-4 max-w-3xl">
-        <Skeleton className="h-8 w-24 mb-4" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-3/4 mb-2" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-1/4" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const handleBack = () => {
-    router.back();
-  };
-
-  if (error) {
-    return (
-      <div className="container mx-auto p-4 max-w-3xl">
-        <Button variant="ghost" className="mb-4" onClick={handleBack}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
-        </Button>
-        <Card className="bg-destructive/10">
-          <CardHeader>
-            <CardTitle className="text-destructive">Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!todo) {
+  if (!todo || error) {
     return (
       <div className="container mx-auto p-4 max-w-3xl">
         <Button variant="ghost" className="mb-4" onClick={handleBack}>
@@ -124,9 +83,38 @@ export default function TodoDetail({ id, initialData }: TodoDetailProps) {
         </Button>
         <Card className="bg-muted">
           <CardHeader>
-            <CardTitle>Todo Not Found</CardTitle>
-            <CardDescription>The requested todo item could not be found.</CardDescription>
+            <CardTitle>{error || 'Todo Not Found'}</CardTitle>
+            <CardDescription>
+              {error 
+                ? 'An error occurred while loading the todo.' 
+                : 'The requested todo item could not be found.'}
+            </CardDescription>
           </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4 max-w-3xl">
+        <Button variant="ghost" className="mb-4" disabled>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Todos
+        </Button>
+        <Card>
+          <CardHeader>
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </CardContent>
         </Card>
       </div>
     );
