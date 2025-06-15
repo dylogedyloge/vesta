@@ -1,7 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -12,21 +19,33 @@ import { EditTodoDialog } from "./EditTodoDialog";
 import { CreateTodoDialog } from "./CreateTodoDialog";
 import { Plus } from "lucide-react";
 import { Todo, User, TaskTableProps } from "@/types";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { MultipleSelector, Option } from "@/components/ui/multiple-selector";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 import { PAGINATION } from "@/config";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { getTodos } from "@/app/actions/todos";
 import { getUsers } from "@/app/actions/users";
 import { useTodoStore } from "@/store/todoStore";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from "next/navigation";
 import { generateSlug } from "@/lib/utils";
-
-
 
 export default function TaskTable({ initialData }: TaskTableProps) {
   const router = useRouter();
@@ -42,7 +61,9 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   const [users, setUsers] = useState<User[]>(initialData.users);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
-  const [localSearch, setLocalSearch] = useState(searchParams.get('search') || '');
+  const [localSearch, setLocalSearch] = useState(
+    searchParams.get("search") || ""
+  );
 
   const todos = useTodoStore((state) => state.todos);
   const setInitialTodos = useTodoStore((state) => state.setInitialTodos);
@@ -55,9 +76,10 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   }, [initialData.todos, todos.length]);
 
   // Get filter values from URL
-  const statusFilter = searchParams.get('status') || 'all';
-  const searchQuery = searchParams.get('search') || '';
-  const assigneeIds = searchParams.get('assignees')?.split(',').filter(Boolean) || [];
+  const statusFilter = searchParams.get("status") || "all";
+  const searchQuery = searchParams.get("search") || "";
+  const assigneeIds =
+    searchParams.get("assignees")?.split(",").filter(Boolean) || [];
 
   const getUserName = (userId: string): string => {
     if (!users.length) return "Loading...";
@@ -66,44 +88,44 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   };
 
   // Create assigneeFilter after getUserName is defined and users are loaded
-  const assigneeFilter: Option[] = assigneeIds.map(id => ({
+  const assigneeFilter: Option[] = assigneeIds.map((id) => ({
     value: id,
     // Only use getUserName if users are loaded
-    label: users.length > 0 ? getUserName(id) : `User ${id}`
+    label: users.length > 0 ? getUserName(id) : `User ${id}`,
   }));
 
   // Update URL with filter values
   const updateFilters = ({
     newStatus = statusFilter,
     newSearch = searchQuery,
-    newAssignees = assigneeFilter
+    newAssignees = assigneeFilter,
   }) => {
     if (!users.length) return; // Don't update if users aren't loaded yet
-    
+
     // Create new URLSearchParams but don't modify existing URL until we're sure we need to
     const currentUrl = new URL(window.location.href);
     const params = new URLSearchParams(currentUrl.search);
     const oldParams = new URLSearchParams(currentUrl.search);
-    
+
     // Handle status filter
-    if (newStatus === 'all') {
-      params.delete('status');
+    if (newStatus === "all") {
+      params.delete("status");
     } else {
-      params.set('status', newStatus);
+      params.set("status", newStatus);
     }
 
     // Handle search filter
     if (!newSearch) {
-      params.delete('search');
+      params.delete("search");
     } else {
-      params.set('search', newSearch);
+      params.set("search", newSearch);
     }
 
     // Handle assignee filter
     if (newAssignees.length === 0) {
-      params.delete('assignees');
+      params.delete("assignees");
     } else {
-      params.set('assignees', newAssignees.map(a => a.value).join(','));
+      params.set("assignees", newAssignees.map((a) => a.value).join(","));
     }
 
     // Compare old and new params
@@ -112,7 +134,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
 
     // Only update if there's an actual change
     if (oldParamsString !== newParamsString) {
-      const newUrl = newParamsString ? `?${newParamsString}` : '/';
+      const newUrl = newParamsString ? `?${newParamsString}` : "/";
       router.push(newUrl, { scroll: false });
     }
   };
@@ -131,13 +153,15 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   // Update assignee labels when users are loaded
   useEffect(() => {
     if (users.length > 0 && assigneeIds.length > 0) {
-      const updatedAssignees = assigneeIds.map(id => ({
+      const updatedAssignees = assigneeIds.map((id) => ({
         value: id,
-        label: getUserName(id)
+        label: getUserName(id),
       }));
       // Only update if the labels have actually changed
-      const currentAssigneeLabels = assigneeFilter.map(a => a.label).join(',');
-      const newAssigneeLabels = updatedAssignees.map(a => a.label).join(',');
+      const currentAssigneeLabels = assigneeFilter
+        .map((a) => a.label)
+        .join(",");
+      const newAssigneeLabels = updatedAssignees.map((a) => a.label).join(",");
       if (currentAssigneeLabels !== newAssigneeLabels) {
         updateFilters({ newAssignees: updatedAssignees });
       }
@@ -154,13 +178,16 @@ export default function TaskTable({ initialData }: TaskTableProps) {
       }
       if (result.data) {
         // Only update if data is different and store is empty
-        if (todos.length === 0 || JSON.stringify(result.data) !== JSON.stringify(todos)) {
+        if (
+          todos.length === 0 ||
+          JSON.stringify(result.data) !== JSON.stringify(todos)
+        ) {
           setInitialTodos(result.data);
         }
         setHasNextPage(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch todos');
+      setError(err instanceof Error ? err.message : "Failed to fetch todos");
     } finally {
       setIsFetchingNextPage(false);
     }
@@ -176,7 +203,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
         setUsers(result.data);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+      setError(err instanceof Error ? err.message : "Failed to fetch users");
     }
   };
 
@@ -185,10 +212,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
     const fetchInitialData = async () => {
       if (todos.length === 0 || users.length === 0) {
         setIsLoading(true);
-        await Promise.all([
-          fetchTodos(1),
-          fetchUsers()
-        ]);
+        await Promise.all([fetchTodos(1), fetchUsers()]);
         setIsLoading(false);
       }
     };
@@ -200,7 +224,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   useEffect(() => {
     const refetchInterval = setInterval(() => {
       // Only refetch if the page is visible
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         fetchTodos();
       }
     }, 10000); // Increased interval to 10 seconds
@@ -222,20 +246,24 @@ export default function TaskTable({ initialData }: TaskTableProps) {
   const handleEditClick = (todo: Todo) => setTodoToEdit(todo);
 
   const handleRowClick = (todo: Todo) => {
-    const slug = generateSlug(todo.title, todo.id);
+    const slug = generateSlug(todo.title);
     router.push(`/todos/${slug}`);
   };
 
   // Filter todos based on status and search query
-  const filteredTodos = todos.filter(todo => {
-    const matchesStatus = statusFilter === "all" || 
+  const filteredTodos = todos.filter((todo) => {
+    const matchesStatus =
+      statusFilter === "all" ||
       (statusFilter === "completed" && todo.completed) ||
       (statusFilter === "pending" && !todo.completed);
 
-    const matchesAssignee = assigneeFilter.length === 0 ||
-      assigneeFilter.some(option => option.value === String(todo.userId));
+    const matchesAssignee =
+      assigneeFilter.length === 0 ||
+      assigneeFilter.some((option) => option.value === String(todo.userId));
 
-    const matchesSearch = todo.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = todo.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
 
     return matchesStatus && matchesAssignee && matchesSearch;
   });
@@ -252,16 +280,32 @@ export default function TaskTable({ initialData }: TaskTableProps) {
       if (current <= 4) {
         items.push(1, 2, 3, 4, 5, "ellipsis", total);
       } else if (current >= total - 3) {
-        items.push(1, "ellipsis", total - 4, total - 3, total - 2, total - 1, total);
+        items.push(
+          1,
+          "ellipsis",
+          total - 4,
+          total - 3,
+          total - 2,
+          total - 1,
+          total
+        );
       } else {
-        items.push(1, "ellipsis", current - 1, current, current + 1, "ellipsis", total);
+        items.push(
+          1,
+          "ellipsis",
+          current - 1,
+          current,
+          current + 1,
+          "ellipsis",
+          total
+        );
       }
     }
     return items;
   };
 
   // Get paginated todos for desktop view
-  const paginatedTodos = !isMobile 
+  const paginatedTodos = !isMobile
     ? filteredTodos.slice((page - 1) * pageSize, page * pageSize)
     : filteredTodos;
 
@@ -298,24 +342,24 @@ export default function TaskTable({ initialData }: TaskTableProps) {
           </Select>
           <div className="w-[200px]">
             <MultipleSelector
-              value={assigneeIds.map(id => {
-                console.log('Processing assignee ID:', id);
+              value={assigneeIds.map((id) => {
+                console.log("Processing assignee ID:", id);
                 const name = getUserName(id);
-                console.log('Got name:', name);
+                console.log("Got name:", name);
                 return {
                   value: String(id),
-                  label: name
+                  label: name,
                 };
               })}
               onChange={(value) => {
-                console.log('Selected values:', value);
+                console.log("Selected values:", value);
                 updateFilters({ newAssignees: value });
               }}
-              options={users.map(user => {
-                console.log('Creating option for user:', user);
+              options={users.map((user) => {
+                console.log("Creating option for user:", user);
                 return {
                   label: user.name,
-                  value: String(user.id)
+                  value: String(user.id),
                 };
               })}
               placeholder={users.length ? "Filter by assignee" : "Loading..."}
@@ -348,10 +392,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
             {paginatedTodos.map((todo) => (
               <TableRow key={todo.id}>
                 <TableCell>
-                  <Link 
-                    href={`/todos/${todo.id}`} 
-                    className="hover:underline"
-                  >
+                  <Link href={`/todos/${todo.id}`} className="hover:underline">
                     {todo.title}
                   </Link>
                 </TableCell>
@@ -363,27 +404,21 @@ export default function TaskTable({ initialData }: TaskTableProps) {
                 <TableCell>{getUserName(todo.userId)}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button
-                    variant="outline" 
+                    variant="outline"
                     size="sm"
                     onClick={() => handleEditClick(todo)}
                   >
                     Edit
                   </Button>
                   <Button
-                    variant="destructive" 
+                    variant="destructive"
                     size="sm"
                     onClick={() => handleDeleteClick(todo)}
                   >
                     Delete
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    asChild
-                  >
-                    <Link href={`/todos/${todo.id}`}>
-                      Details
-                    </Link>
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link href={`/todos/${todo.id}`}>Details</Link>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -398,13 +433,17 @@ export default function TaskTable({ initialData }: TaskTableProps) {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className={
+                    page === 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
                 >
                   Previous
                 </PaginationPrevious>
               </PaginationItem>
-              {getPaginationItems(page, totalPages).map((item, index) => (
+              {getPaginationItems(page, totalPages).map((item, index) =>
                 item === "ellipsis" ? (
                   <PaginationItem key={`ellipsis-${index}`}>
                     <PaginationEllipsis />
@@ -419,11 +458,15 @@ export default function TaskTable({ initialData }: TaskTableProps) {
                     </PaginationLink>
                   </PaginationItem>
                 )
-              ))}
+              )}
               <PaginationItem>
                 <PaginationNext
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className={
+                    page === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
                 >
                   Next
                 </PaginationNext>

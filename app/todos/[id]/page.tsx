@@ -11,9 +11,10 @@ export const revalidate = 60;
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const todoResult = await getTodoById(params.id);
+  const resolvedParams = await params;
+  const todoResult = await getTodoById(resolvedParams.id);
   const title = todoResult.data?.title || "Todo Details";
 
   return {
@@ -26,10 +27,13 @@ export async function generateMetadata({
 export default async function TodoDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  // Resolve params first
+  const resolvedParams = await params;
+
   // Fetch data on the server
-  const todoResult = await getTodoById(params.id);
+  const todoResult = await getTodoById(resolvedParams.id);
   const userResult = todoResult.data
     ? await getUserById(todoResult.data.userId)
     : { data: null, error: null };
@@ -42,7 +46,7 @@ export default async function TodoDetailPage({
 
   return (
     <Suspense fallback={<div>Loading..</div>}>
-      <TodoDetail id={params.id} initialData={initialData} />
+      <TodoDetail id={resolvedParams.id} initialData={initialData} />
     </Suspense>
   );
 }
