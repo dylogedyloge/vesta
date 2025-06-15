@@ -6,11 +6,14 @@ import { getUserById } from "@/app/actions/users";
 // Enable revalidation every 60 seconds
 export const revalidate = 60;
 
-export default async function TodoDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
+type Props = {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export default async function TodoDetailPage({ params }: Props) {
   // Fetch data on the server
   const [todoResult, userResult] = await Promise.all([
     getTodoById(params.id),
@@ -20,13 +23,13 @@ export default async function TodoDetailPage({
         return getUserById(result.data.userId);
       }
       return { data: null, error: null };
-    })
+    }),
   ]);
 
   const initialData = {
     todo: todoResult.data || null,
     user: userResult.data || null,
-    error: todoResult.error || userResult.error || null
+    error: todoResult.error || userResult.error || null,
   };
 
   return (
@@ -34,4 +37,4 @@ export default async function TodoDetailPage({
       <TodoDetail id={params.id} initialData={initialData} />
     </Suspense>
   );
-} 
+}
