@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import TodoDetail from "@/components/TodoDetail";
 import { getTodoById } from "@/app/actions/todos";
 import { getUserById } from "@/app/actions/users";
@@ -6,13 +7,14 @@ import { getUserById } from "@/app/actions/users";
 // Enable revalidation every 60 seconds
 export const revalidate = 60;
 
-type PageParams = { id: string };
+type Props = {
+  params: { id: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
 
-export default async function TodoDetailPage({
-  params,
-}: {
-  params: PageParams;
-}) {
+export default async function TodoDetailPage(props: Props) {
+  const { params } = props;
+
   // Fetch data on the server
   const [todoResult, userResult] = await Promise.all([
     getTodoById(params.id),
