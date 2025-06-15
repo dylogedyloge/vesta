@@ -7,12 +7,26 @@ import { getUserById } from "@/app/actions/users";
 // Enable revalidation every 60 seconds
 export const revalidate = 60;
 
-type Props = {
+// Generate metadata for the page
+export async function generateMetadata({
+  params,
+}: {
   params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
+}): Promise<Metadata> {
+  const todoResult = await getTodoById(params.id);
+  const title = todoResult.data?.title || "Todo Details";
 
-export default async function TodoDetailPage({ params }: Props) {
+  return {
+    title,
+    description: `Details for todo: ${title}`,
+  };
+}
+
+export default async function TodoDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   // Fetch data on the server
   const [todoResult, userResult] = await Promise.all([
     getTodoById(params.id),
