@@ -22,22 +22,17 @@ export async function generateMetadata({
   };
 }
 
+// This is a Server Component
 export default async function TodoDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
   // Fetch data on the server
-  const [todoResult, userResult] = await Promise.all([
-    getTodoById(params.id),
-    // We can only get the user after we have the todo
-    getTodoById(params.id).then(async (result) => {
-      if (result.data) {
-        return getUserById(result.data.userId);
-      }
-      return { data: null, error: null };
-    }),
-  ]);
+  const todoResult = await getTodoById(params.id);
+  const userResult = todoResult.data
+    ? await getUserById(todoResult.data.userId)
+    : { data: null, error: null };
 
   const initialData = {
     todo: todoResult.data || null,
