@@ -319,66 +319,66 @@ export default function TaskTable({ initialData }: TaskTableProps) {
 
   return (
     <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
+      {/* Header Section - Responsive Layout */}
+      <div className="flex flex-col space-y-4 mb-6">
+        {/* Top Row - Add Todo Button and Theme Toggle */}
+        <div className="flex justify-between items-center">
           <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Todo
           </Button>
           <ThemeToggle />
         </div>
-        <div className="flex items-center space-x-2">
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => updateFilters({ newStatus: value })}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="w-[200px]">
-            <MultipleSelector
-              value={assigneeIds.map((id) => {
-                console.log("Processing assignee ID:", id);
-                const name = getUserName(id);
-                console.log("Got name:", name);
-                return {
-                  value: String(id),
-                  label: name,
-                };
-              })}
-              onChange={(value) => {
-                console.log("Selected values:", value);
-                updateFilters({ newAssignees: value });
-              }}
-              options={users.map((user) => {
-                console.log("Creating option for user:", user);
-                return {
-                  label: user.name,
-                  value: String(user.id),
-                };
-              })}
-              placeholder={users.length ? "Filter by assignee" : "Loading..."}
-              className={users.length ? "" : "opacity-50 pointer-events-none"}
-            />
-          </div>
-          <div className="flex w-full max-w-sm items-center space-x-2">
+
+        {/* Bottom Row - Filters and Search */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search Input - Full width on mobile, flex-1 on desktop */}
+          <div className="w-full sm:flex-1">
             <Input
               type="text"
               placeholder="Search todos..."
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              className=""
+              className="w-full"
             />
+          </div>
+
+          {/* Filters - Stack on mobile, row on desktop */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => updateFilters({ newStatus: value })}
+            >
+              <SelectTrigger className="w-full sm:w-[120px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="w-full sm:w-[200px]">
+              <MultipleSelector
+                value={assigneeIds.map((id) => ({
+                  value: String(id),
+                  label: getUserName(id),
+                }))}
+                onChange={(value) => updateFilters({ newAssignees: value })}
+                options={users.map((user) => ({
+                  label: user.name,
+                  value: String(user.id),
+                }))}
+                placeholder={users.length ? "Filter by assignee" : "Loading..."}
+                className={users.length ? "" : "opacity-50 pointer-events-none"}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Table Section */}
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -403,23 +403,25 @@ export default function TaskTable({ initialData }: TaskTableProps) {
                 </TableCell>
                 <TableCell>{getUserName(todo.userId)}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditClick(todo)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteClick(todo)}
-                  >
-                    Delete
-                  </Button>
-                  <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/todos/${todo.id}`}>Details</Link>
-                  </Button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditClick(todo)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteClick(todo)}
+                    >
+                      Delete
+                    </Button>
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href={`/todos/${todo.id}`}>Details</Link>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -427,6 +429,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
         </Table>
       </div>
 
+      {/* Pagination Section */}
       {!isMobile && totalPages > 1 && (
         <div className="mt-4 flex justify-center">
           <Pagination>
@@ -476,6 +479,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
         </div>
       )}
 
+      {/* Mobile Load More */}
       {isMobile && hasNextPage && (
         <div ref={observerTarget} className="flex justify-center p-4">
           {isFetchingNextPage ? (
@@ -488,6 +492,7 @@ export default function TaskTable({ initialData }: TaskTableProps) {
         </div>
       )}
 
+      {/* Dialogs */}
       <CreateTodoDialog
         users={users}
         isOpen={isCreateDialogOpen}
