@@ -32,7 +32,7 @@ export default async function TodoDetailPage({ params }: TodoPageProps) {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading..</div>}>
       <TodoDetail id={params.id} initialData={initialData} />
     </Suspense>
   );
